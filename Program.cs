@@ -26,4 +26,5 @@ AIAgent agent = new AIProjectClient(new Uri(projectEndpoint), new AzureCliCreden
 IChatClient chatClient = agent.AsIChatClient();
 
 var response = await chatClient.GetResponseAsync("Hello, how can you assist me today?");
+
 Console.WriteLine(response);
