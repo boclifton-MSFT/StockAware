@@ -12,6 +12,7 @@ The final version lives in `../StockAware-FINAL_1` and represents the polished e
 
 - `StockAware.csproj` - .NET 10 console project with `Microsoft.Agents.AI`
 - `Program.cs` - minimal baseline Microsoft Agent Framework setup
+- `InMemoryVectorStore.cs` - demo-only `VectorStore` mock; storage operations throw `NotSupportedException` rather than implementing persistence or vector search
 - `../StockAware-FINAL_1/` - the complete final-state retail agent demo
 - `.vscode/CodeSnippets-StockAware.code-snippets` - reusable slide-friendly code snippets for the lecture flow
 
