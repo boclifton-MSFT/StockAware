@@ -1,0 +1,90 @@
+# From the workspace root:
+#   dotnet run --project .\StockAware -- --serve
+# Trusted loopback demo only. No HTTP approval endpoint exists.
+# Requests 2 and 3 share a conversation. Restarting the host loses context lookup.
+@baseUrl = http://localhost:5080
+
+### 1. Check host readiness (does not test model access)
+GET {{baseUrl}}/health
+
+### Discover the copilot
+GET {{baseUrl}}/.well-known/agent-card.json
+
+### 2. Use a real MCP inventory tool
+# @name inventory
+POST {{baseUrl}}/a2a/stockaware/message:send
+Content-Type: application/json
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "role": "ROLE_USER",
+    "parts": [
+      { "text": "My name is Morgan. Read the stock report for store 047. Which products need attention? Cite evidence and keep it concise." }
+    ]
+  }
+}
+
+### 3. Continue the same conversation without repeating name or store
+POST {{baseUrl}}/a2a/stockaware/message:send
+Content-Type: application/json
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "contextId": "{{inventory.response.body.$.message.contextId}}",
+    "role": "ROLE_USER",
+    "parts": [
+      { "text": "What is my name, and which store were we discussing? Why is conversation history not a fresh inventory count?" }
+    ]
+  }
+}
+
+### 4. Run the sequential specialist workflow (not the console's judge loop)
+POST {{baseUrl}}/a2a/weekend-readiness/message:send
+Content-Type: application/json
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "role": "ROLE_USER",
+    "parts": [
+      { "text": "Prepare a weekend readiness handoff for stores 047, 112 and 208 and supplier incident SUP-482. Use evidence; respect reservations, quality holds and late deliveries. Distinguish catalog exposure from physical stock. Do not create proposals." }
+    ]
+  }
+}
+
+### 5. Stream a response as Server-Sent Events
+POST {{baseUrl}}/a2a/stockaware/message:stream
+Content-Type: application/json
+Accept: text/event-stream
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "role": "ROLE_USER",
+    "parts": [
+      { "text": "In two sentences, explain why a judge's passing verdict is not authorization to change inventory." }
+    ]
+  }
+}
+
+### 6. Optional: persist a pending local-only proposal
+# Stop the host and use the console with the SAME data directory to /approve ID.
+POST {{baseUrl}}/a2a/stockaware/message:send
+Content-Type: application/json
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "role": "ROLE_USER",
+    "parts": [
+      { "text": "Check current stock and evaluate exactly 12 milk cartons, SKU 10482, from store 208 to 047. If feasible, create a pending local proposal and give its exact ID. Do not approve or claim dispatch." }
+    ]
+  }
+}
