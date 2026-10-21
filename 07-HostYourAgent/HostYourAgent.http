@@ -1,0 +1,99 @@
+# Start the host from the workspace root:
+#   az login
+#   dotnet run --project .\07-HostYourAgent
+#
+# In VS Code, use the REST Client extension's "Send Request" links.
+# Run requests 1-4 in order. Request 3 uses the context returned by request 2.
+# Model requests use the host's shared user secrets and Azure CLI login.
+# This host is local-only and requires no Authorization header.
+
+@baseUrl = http://localhost:5000
+
+### 1. Discover the pirate agent (no model call)
+# Expect HTTP 200 with the agent name, description, and A2A interface URL.
+GET {{baseUrl}}/.well-known/agent-card.json
+Accept: application/json
+
+### 2. Call the pirate agent and its illustrative weather tool
+# Expect a pirate-style answer containing Amsterdam, cloudy, and 15 degrees C.
+# The weather comes from a local mock tool, not live weather data.
+# The response's message.contextId identifies this conversation.
+# @name pirateWeather
+POST {{baseUrl}}/a2a/pirate/message:send
+Content-Type: application/json
+Accept: application/json
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "role": "ROLE_USER",
+    "parts": [
+      {
+        "text": "My name is Alice. What is the weather like in Amsterdam? Use your weather tool and keep your answer to two sentences."
+      }
+    ]
+  }
+}
+
+### 3. Continue the same conversation
+# Run request 2 successfully first. Re-run it after restarting the host,
+# because the host's sessions are stored only in memory.
+# Expect the agent to recall Alice and Amsterdam without repeating them here.
+POST {{baseUrl}}/a2a/pirate/message:send
+Content-Type: application/json
+Accept: application/json
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "contextId": "{{pirateWeather.response.body.$.message.contextId}}",
+    "role": "ROLE_USER",
+    "parts": [
+      {
+        "text": "What is my name, and which city's weather did I ask about? Reply in one sentence."
+      }
+    ]
+  }
+}
+
+### 4. Run the sequential two-agent workflow
+# Agent 1 drafts an answer; agent 2 reviews and improves it.
+# Expect one HTTP response with both agents' text in message.parts, in order.
+POST {{baseUrl}}/a2a/my-workflow/message:send
+Content-Type: application/json
+Accept: application/json
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "role": "ROLE_USER",
+    "parts": [
+      {
+        "text": "Draft and refine a three-item checklist for preparing a grocery store for a busy weekend. Keep the final response under 100 words."
+      }
+    ]
+  }
+}
+
+### 5. Optional: stream a pirate response as Server-Sent Events
+# Expect HTTP 200 with text/event-stream and data: events.
+# A streaming client may buffer display until the response completes.
+POST {{baseUrl}}/a2a/pirate/message:stream
+Content-Type: application/json
+Accept: text/event-stream
+A2A-Version: 1.0
+
+{
+  "message": {
+    "messageId": "{{$guid}}",
+    "role": "ROLE_USER",
+    "parts": [
+      {
+        "text": "In three short sentences, explain what an AI agent is to a new developer. Speak like a pirate."
+      }
+    ]
+  }
+}

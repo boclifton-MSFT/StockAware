@@ -1,29 +1,22 @@
-# Build output
+# Build output and local tooling
 bin/
 obj/
-
-# Visual Studio
 .vs/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 
-# Visual Studio Code
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-
-# Test results
+# Test results and packages
 TestResults/
 *.trx
-
-# NuGet
 *.nupkg
 *.snupkg
 packages/
 
-# Runtime files
+# Local runtime data
+agent-file-memory/
+memory/
 *.log
 
 # Local configuration and secrets

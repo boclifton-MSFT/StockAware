@@ -1,176 +1,156 @@
-# StockAware: weekend readiness command center
+# StockAware: practical retail agents in C#
 
-A console-first retail multi-agent application that brings walkthroughs 01–09 together in one business story. All AI responses use Microsoft Foundry; all retail records are synthetic. A **real stdio MCP connection** to [StockAwareMcp](../StockAwareMcp/README.md) supplies evidence and persists local transfer proposals and stock changes.
+**From an agent that talks about inventory to a team that investigates evidence, critiques its recommendations, and asks before changing anything.**
 
-## What the audience sees
+Welcome to the StockAware workshop! This repository helps you build practical AI agents in C# with Microsoft Agent Framework. Work through nine independently runnable samples, then explore a complete console-first StockAware application that brings the concepts together.
 
-It is Friday before a promotion weekend. Store 047 has milk and coffee shortages. Store 112's apparent milk surplus is mostly reserved. Store 208 has a banana quality hold, despite apparently adequate recorded stock. A supplier catalog incident affects promotion SKUs, but is **not evidence of physical stock loss**.
+You will learn to create and stream agent responses, connect tools, maintain conversations, persist memory, compose workflows, host agents, evaluate their work, and provide reusable skills.
 
-```text
-InventoryAnalyst -> SupplierInvestigator -> DecisionLead
-        sequential Agent Framework workflow
-                         |
-                evidence-aware AI judge
-                   refine / complete
-                         |
-            StockAware streamed conversation
-                         |
-             MCP local transfer proposal
-                         |
-              human /approve confirmation
-                         |
-           atomic local stock + audit update
-```
+## Before you begin
 
-The fixture's clock is fixed at **16 October 2026, 17:15 UTC**, protecting opening on **17 October at 12:00 UTC**. Retrieval timestamps are actual wall-clock time. This is not a current inventory feed.
+- Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) and [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli).
+- Use an editor such as Visual Studio Code with C# support or Visual Studio.
+- Clone this repository, or download and extract it, then open a terminal in the repository root. The commands below use PowerShell.
+- Have access to a Microsoft Foundry project and an existing model deployment. Use the project endpoint and deployment name supplied for your workshop, or your own resources. Configuring these values does not grant access.
 
-## Concept map
+Most samples make paid model calls. The full application can make multiple calls per investigation and take several minutes. Sample 05 runs locally without Azure, so you can try it even before your model access is ready.
 
-| Walkthrough | Integrated surface | Presenter cue |
-| --- | --- | --- |
-| 01: First agent | Foundry-backed named agents; streamed console replies | "The model reasons; the application owns execution." |
-| 02: Tools | Eleven discoverable MCP tools; explicit per-agent tool allowlist | Show the real tool arguments and `MCP-001` evidence result. |
-| 03: Multi-turn | One copilot session across follow-ups | Ask about "that store" without repeating its ID. |
-| 04: Memory | File-backed chat history plus serialized session | Exit, restart, and recall the earlier conversation. |
-| 05: Workflows | Inventory → supplier → decision via `AgentWorkflowBuilder` | Show each specialist's labeled handoff. |
-| 06: Harness | `/research` uses a separate planning/todo/hosted-search agent | Research a public retail topic with source URLs. |
-| 07: Hosting | Local ASP.NET Core HTTP/A2A, discovery, context IDs, SSE | Send the supplied HTTP requests from VS Code. |
-| 08: Looping | `LoopAgent` with a ledger-aware `AIJudgeLoopEvaluator` | Show real REFINE feedback or a complete first pass. |
-| 09: Skills | The supplier specialist loads `supplier-feed-triage` and its references | Contrast reusable procedure with raw diagnostic tools. |
+## Set up your environment
 
-These are running framework features, not simulated model responses. There is no offline AI fallback.
-
-## Setup
-
-Run from the workspace root, with .NET 10 and Azure CLI installed:
+Sign in with the account that has access to your Foundry project, then replace the placeholders with your project endpoint and actual deployment name:
 
 ```powershell
 az login
 dotnet user-secrets set "StockAware:Endpoint" "https://YOUR-RESOURCE.services.ai.azure.com/api/projects/YOUR-PROJECT" --project .\StockAware
 dotnet user-secrets set "StockAware:DeploymentName" "YOUR-DEPLOYMENT" --project .\StockAware
 dotnet build .\StockAware.slnx
+dotnet run --no-build --project .\01-YourFirstAgent
 ```
 
-The existing shared `stockaware-meijer-demo` secret store is reused. Use a deployed model that supports **Chat Completions and function calling**. `/research` additionally requires **Responses and hosted web search**. The Azure CLI identity needs access to the Foundry project and deployment; configuration does not grant permissions.
+The first sample prints an answer about the largest city in France, then streams a short fun fact. Model wording can vary.
 
-| Setting | Environment variable | Behavior |
-| --- | --- | --- |
-| `StockAware:Endpoint` | `StockAware__Endpoint` | Required HTTPS Foundry **project** endpoint. |
-| `StockAware:DeploymentName` | `StockAware__DeploymentName` | Required actual deployment name. |
-| `StockAware:DataDirectory` | `StockAware__DataDirectory` | Default: `%LOCALAPPDATA%\StockAware`. Shared with the MCP child. |
-| `StockAware:McpProject` | `StockAware__McpProject` | Optional absolute MCP project path; discovered automatically in this checkout. |
+All numbered projects and StockAware share the same user-secrets store, so you only need to configure the endpoint and deployment once. Do not put credentials or private configuration in source files.
 
-Environment variables override user secrets for the same key. Legacy `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_DEPLOYMENT_NAME` are fallback aliases only; the endpoint alias still needs a project endpoint. `.env` files are not loaded. No credentials are written into source or local state.
+### Configuration and model requirements
 
-## Recommended live presentation: 15–20 minutes
+Environment variables `StockAware__Endpoint` and `StockAware__DeploymentName` override the matching user-secret keys. `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_DEPLOYMENT_NAME` are fallback aliases only; the endpoint must still be a **Foundry project endpoint** containing `/api/projects/`, not a resource-level Azure OpenAI endpoint. `.env` files are not loaded.
 
-Use a **new data directory per rehearsal** so a previous approved transfer does not alter the opening scene:
+The examples use `AzureCliCredential` and `az login`, not API keys. Numbered examples default to deployment `gpt-4o-mini` if no deployment is configured; StockAware requires an explicit deployment name.
+
+Steps 1-3, 6 and 7 use Responses; steps 4, 8 and 9 use Chat Completions. StockAware uses Chat Completions for retail agents and Responses for its optional research harness. Your deployment must support the APIs used by the sample, plus function calling where tools are registered. Hosted web search is additionally required for the research harness.
+
+## Your workshop path
+
+Start with sample 01 and follow the numbered projects in order, or revisit individual topics after the workshop. Each project contains a complete runnable example rather than an unfinished exercise. Open its `Program.cs`, run it, and trace how the framework concepts connect to the output.
+
+The project table below links directly to each sample's entry point. After exploring the samples, try the integrated application to see the same patterns working together.
+
+## Explore the integrated application
+
+StockAware is a weekend readiness command center for synthetic stores **047, 112 and 208**:
+
+1. **InventoryAnalyst** reconciles stock, reservations, quality holds and latest delivery estimates.
+2. **SupplierInvestigator** uses a reusable file-based skill to investigate a catalog-feed incident.
+3. **DecisionLead** consolidates an evidence-backed decision brief.
+4. An **AI judge** critiques the brief against the actual retrieved tool ledger and drives bounded refinement.
+5. The **StockAware copilot** streams follow-ups, remembers conversations across restarts and can persist a pending transfer proposal.
+6. A **human manager** explicitly confirms `/approve ID`; the real [MCP server](StockAwareMcp/README.md) revalidates policy and atomically changes local synthetic balances and audit records.
+
+The scenario is fixed at 16 October 2026; tool retrieval timestamps reflect actual execution time. No live retailer systems or customer data are used. Azure is required for every AI mode; there is no offline model-response fallback.
+
+### Run StockAware
+
+After completing setup above, start the application with a new local state directory:
 
 ```powershell
-$env:StockAware__DataDirectory = Join-Path $env:LOCALAPPDATA ("StockAware-Demo-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
+$env:StockAware__DataDirectory = Join-Path $env:LOCALAPPDATA ("StockAware-Workshop-" + (Get-Date -Format "yyyyMMdd-HHmmss"))
 dotnet run --no-build --project .\StockAware
 ```
 
-Keep that same environment variable in the terminal when restarting. In the console:
+Try the following in the console:
 
-1. `/stock 047` — expose the initial 12 milk cartons and zero coffee bags.
-2. `/demo` — run the four acts:
-   - **Investigate:** inventory, supplier and decision specialists exchange handoffs.
-   - **Critique:** the judge checks actual retrieved evidence and may request refinement.
-   - **Propose:** the copilot streams a follow-up and persists a feasible proposal to move **12 milk cartons from 208 to 047**. It does not apply it.
-   - **Authorize:** the application stops short of approval and shows the next controls.
-3. `/actions` — copy the exact pending proposal ID. `/stock 047` should still show **12**.
-4. `/approve ID` — review the log and type exactly `APPROVE ID`.
-5. `/stock 047` and `/stock 208` — show **24** and **36** respectively. Total milk is conserved; no physical truck was dispatched.
-6. Ask: `What is the current status of that proposal? Recheck the action log.`
-7. Ask: `My name is Morgan. Remember that I manage the weekend promotion.`
-8. `/exit`, restart the same command, then ask: `What do you remember about my role?`
+1. Enter `/stock 047` to inspect the initial inventory.
+2. Enter `/demo` to run the specialist workflow, judge critique, and transfer proposal.
+3. Enter `/actions` to find the pending proposal ID. Check `/stock 047` again: a proposal alone does not change inventory.
+4. To apply the proposal to the synthetic data, enter `/approve ID` with the actual ID, then type the exact `APPROVE ID` confirmation when prompted.
+5. Check `/stock 047` and `/stock 208`. For the standard 12-carton transfer, store 047 changes from **12** to **24**, and store 208 changes from **48** to **36**. No truck is dispatched; this is a local data mutation through real MCP calls.
+6. Tell the copilot your workshop role, enter `/exit`, then restart with the same data directory and ask what it remembers.
 
-The one-shot equivalent is `dotnet run --no-build --project .\StockAware -- --demo`. It saves the report, conversation and proposal, then exits **without approving**. Start the interactive console against the same data directory to approve.
+Keep the same terminal and data-directory value when testing restart memory; rerun only the `dotnet run` command. To start a fresh scenario, generate a new directory with the assignment above. `/new` resets the conversation, not inventory or the action log. Local conversation history is stored in plaintext, so use synthetic, nonsensitive information.
 
-Investigations involve multiple paid model calls and can take several minutes. Rehearse with the venue network and pinned package versions. A complete first pass is valid: extra iterations are not manufactured for the presentation.
-
-### Expected reasoning
-
-- **047 milk:** the initial 12-carton opening gap can be covered from 208, while preserving 208's protected stock. Supplier milk is estimated four hours after opening.
-- **112 milk:** 60 on hand minus 30 reserved minus 24 protected leaves **6**, not 36, transferable cartons.
-- **047 coffee:** the old planning board is superseded by the latest Monday estimate. Neither donor has surplus coffee. Escalate the uncovered opening risk rather than inventing a transfer.
-- **208 bananas:** 24 of the recorded 45 lb **may** be bruised. Usable stock remains unknown; do not write off inventory or assume the requested inbound window is confirmed.
-- **SUP-482:** 2,400 messages = 2,216 applied + 176 permanent rejects + 8 retry-pending. The producer sent `"12 EA"` instead of integer `casePack`; 42 rejected SKUs overlap promotions. Store-level catalog publication is unknown. Correct and validate payloads, verify rejected IDs and idempotency, and obtain owner approval before bounded replay.
-
-### Controls
-
-| Command | Result |
-| --- | --- |
-| `/demo` | Full guided workflow, critique, persistent conversation and proposal. |
-| `/investigate` | Specialist workflow and bounded critique only; no proposal. |
-| `/stock STORE` | Current local inventory for 047, 112 or 208. |
-| `/actions` | Pending and applied proposals with revisions and timestamps. |
-| `/approve ID` | Human confirmation; deterministic revalidation and local stock update. |
-| `/new` | New conversation; inventory and audit are preserved. |
-| `/research PUBLIC TASK` | Isolated harness; explicit `PUBLIC` confirmation on every research turn. |
-| `/help`, `/exit` | Controls; save and exit. |
-| Other text | Streamed multi-turn conversation, with tools and skills available. |
-
-Approval is idempotent for an already applied ID. A proposal becomes stale after another transfer changes the inventory revision; ask for a fresh evaluation/proposal. Source minimums, reservations, holds, cumulative route capacity and confirmed arrival before opening are enforced by code, both at proposal and at approval.
-
-## Public research harness
-
-Optional, after the core demo:
-
-```text
-/research Find two recent public articles about grocery cold-chain resilience. Plan the task, track your steps, then search and cite source URLs and publication dates. Do not use local store data.
-```
-
-Type `PUBLIC` to continue. If the harness asks to move from planning to execution, use another `/research ...` turn to approve that **research plan**. This is unrelated to `/approve` for inventory.
-
-The research harness has a separate in-process session and **no retail MCP tools or retail conversation history**. Do not paste internal business data into a research request. Web search has additional charges and external processing; Bing grounding is outside the usual compliance/geographic boundary and Microsoft Data Protection Addendum. See [Microsoft's search disclosures](https://learn.microsoft.com/azure/foundry/openai/how-to/web-search). Research history is not restored after restart.
-
-## HTTP/A2A hosting
+Other entry points:
 
 ```powershell
-dotnet run --no-build --project .\StockAware -- --serve
+dotnet run --no-build --project .\StockAware -- --demo          # One-shot guided run; exits before human approval
+dotnet run --no-build --project .\StockAware -- --serve         # HTTP/A2A at localhost:5080
+dotnet run --no-build --project .\StockAware -- --verify-tools  # Deterministic real-MCP checks, not an AI demo
 ```
 
-Use [StockAware.http](StockAware.http):
+Use [StockAware.http](StockAware/StockAware.http) to explore A2A discovery, tools, multi-turn context, workflows and server-sent events (SSE) while running `--serve`. The [application reference](StockAware/README.md) provides detailed controls, scenario behavior, and recovery guidance; the [MCP server reference](StockAwareMcp/README.md) explains the tools and local persistence.
 
-- `GET http://localhost:5080/health` checks that the host and MCP initialization succeeded, **not** model inference access.
-- `GET /.well-known/agent-card.json` advertises the copilot.
-- `POST /a2a/stockaware/message:send` supports tools, skills and multi-turn `contextId`.
-- `POST /a2a/stockaware/message:stream` returns Server-Sent Events.
-- `POST /a2a/weekend-readiness/message:send` runs the sequential specialist workflow.
+## Walkthrough projects 01–09
 
-The hosted workflow does **not** run the judge loop; use console `/investigate` or `/demo` to demonstrate critique. Requests are serialized for this single-user demo. A2A conversation lookup is in memory and is lost on host restart; the console's saved session is separate.
+Each numbered project is independently runnable, with no project references to other numbered steps. The integrated app reuses the step 04 history provider and step 09 skill/incident fixture without changing their default behavior.
 
-There is **no HTTP approval endpoint**. Stop the host and use the console, keeping the same data directory, to approve a hosted proposal. The loopback host and stdio tools are for trusted local presenters only: no authentication, tenant isolation or production authorization is provided. Do not expose them to the internet or attach the complete MCP server tool set to an autonomous agent.
+| Project | Key concept | Where StockAware demonstrates it |
+| --- | --- | --- |
+| [01-YourFirstAgent](01-YourFirstAgent/Program.cs) | Create a Foundry-backed agent; invoke and stream responses. | Named retail agents and streamed copilot responses. |
+| [02-AddTools](02-AddTools/Program.cs) | Register a typed read-only weather function. | Real MCP discovery, tool selection, structured evidence and deterministic policy. |
+| [03-MultiTurnConversations](03-MultiTurnConversations/Program.cs) | Reuse a session for conversational context. | Follow-ups without repeating the store or incident. |
+| [04-MemoryAndPersistence](04-MemoryAndPersistence/Program.cs) | Custom file history plus session serialization and restoration. | Durable console conversation restored after process restart. |
+| [05-Workflows](05-Workflows/Program.cs) | Deterministic uppercase/reverse executor pipeline. | Explicit sequential inventory → supplier → decision agent workflow. |
+| [06-AgentHarness](06-AgentHarness/Program.cs) | Interactive planning, todos and hosted web search. | Explicitly opted-in `/research` agent, isolated from retail tools/history. |
+| [07-HostYourAgent](07-HostYourAgent/Program.cs) | ASP.NET hosting, A2A, sequential workflow and streaming. | Loopback HTTP/A2A host for the copilot and specialist workflow. |
+| [08-Looping](08-Looping/Program.cs) | Evidence-aware AI judge drives bounded investigation loops. | Judge critique and refinement against actual MCP results. |
+| [09-AgentSkills](09-AgentSkills/Program.cs) | Progressive disclosure of a file-based supplier triage skill. | Supplier specialist loads the procedure and contract/recovery/ownership references. |
 
-## Files, reports and reset
-
-The data directory contains plaintext synthetic data:
-
-- `retail-state.json`: inventory revision, proposals and applied audit records; written atomically under a cross-process lock.
-- `conversations`: full chat/tool history, console session envelope and lock file.
-- `reports`: brief, reviewed status and actual evidence ledger from guided runs.
-
-Use a new data directory to reset the entire scene without deleting history. `/new` resets only conversation context. Do not edit state during a demo or share a directory across untrusted users. Malformed state fails explicitly rather than silently reseeding. The file store is intentionally not a production database or semantic/vector memory implementation.
-
-If the judge reaches its limit, the guided run saves an **unreviewed** report and stops before proposing anything. A passing judge verdict is critique, not proof of correctness or authorization. Auth, configuration and transport errors are surfaced; live mode never substitutes canned AI responses.
-
-## Validation and code tour
+### Run individual walkthroughs
 
 ```powershell
-dotnet build .\StockAware.slnx
-dotnet run --no-build --project .\StockAware -- --verify-tools
+dotnet run --project .\01-YourFirstAgent
+dotnet run --project .\02-AddTools
+dotnet run --project .\03-MultiTurnConversations
+dotnet run --project .\04-MemoryAndPersistence
+dotnet run --project .\05-Workflows
+dotnet run --project .\06-AgentHarness
+dotnet run --project .\07-HostYourAgent
+dotnet run --project .\08-Looping
+dotnet run --project .\09-AgentSkills
 ```
 
-The deterministic verification launches the **real MCP server twice** with an isolated temporary store. It checks tool separation, invalid inputs, exact transfer feasibility, reservations, quality holds, late/unknown routes, proposal non-mutation/deduplication, approval, conservation, idempotency, stale proposals, cumulative route capacity, incident totals and persistence after restart. It requires no Azure because it tests tools, not AI behavior. It does not replace the live `/demo`, A2A and research checks.
+### Walkthrough-specific notes
 
-| File | Open on stage to explain |
-| --- | --- |
-| [Program.cs](Program.cs) / [DemoSettings.cs](DemoSettings.cs) | Modes, Azure requirement, configuration and failures. |
-| [RetailAgents.cs](RetailAgents.cs) | Agent personas, workflow, evidence-aware judge and separate harness. |
-| [RetailMcpClient.cs](RetailMcpClient.cs) | Real stdio discovery, tool allowlist and captured evidence. |
-| [DemoConsole.cs](DemoConsole.cs) | Streaming, durable session and explicit human confirmation. |
-| [RetailHost.cs](RetailHost.cs) | ASP.NET Core A2A hosting and SSE routes. |
-| [RetailStore.cs](../StockAwareMcp/RetailStore.cs) | Deterministic local-only mutation, version checks and atomic persistence. |
-| [Supplier skill](../09-AgentSkills/skills/supplier-feed-triage/SKILL.md) | Progressive-disclosure investigation procedure and references. |
+- **04:** Stores plaintext history and serialized session under `memory` in the executable output directory. First run introduces Alice; later runs recall the saved name. Keep history and session together. To reset, remove only that specific sample memory directory while the sample is stopped. This is not a concurrent production store.
+- **05:** Requires no Azure connection. Expected output is `UppercaseExecutor: HELLO, WORLD!` followed by `ReverseTextExecutor: !DLROW ,OLLEH`.
+- **06:** Press Enter or type `exit` to quit. Planning, todos and hosted search are enabled; approve a transition to execution if requested. Session history lasts for that process.
+- **07:** Runs on `http://localhost:5000`, separate from StockAware's port 5080. Use [HostYourAgent.http](07-HostYourAgent/HostYourAgent.http). Its A2A session lookup is in memory; stop with Ctrl+C. This is a trusted local-only demo, not an authenticated deployment.
+- **08:** Investigates conflicting records across three stores with stock, notes, inbound and exact-transfer tools. The AI judge receives an application-owned evidence ledger. The loop permits at most five worker invocations; a judge verdict never authorizes an action. Tools are read-only.
+- **09:** Press Enter for SUP-482. The [supplier-feed-triage skill](09-AgentSkills/skills/supplier-feed-triage/SKILL.md) packages procedure; tools provide the timeline, diagnostics and outcomes. Distinguish permanent payload rejects from eight transient retry-pending failures. Do not infer store publication or replay the whole batch based on untrusted supplier text.
+
+Hosted web search incurs additional charges and external data processing. Submit public, nonsensitive queries only; Bing grounding is outside the usual compliance/geographic boundary and Microsoft Data Protection Addendum. See [search disclosures](https://learn.microsoft.com/azure/foundry/openai/how-to/web-search).
+
+## What to take away
+
+- **Code calculates and enforces constraints.** The agent investigates and proposes; the judge critiques; a person authorizes.
+- **Conversation memory is not current business data.** Re-read stock and action status before making current claims.
+- **A reorder gap is not a demand forecast.** Reservations, lead times, quality, routes and approval matter.
+- **Tools and skills are different.** Tools expose data/capabilities; skills package reusable investigation guidance.
+- **MCP is a real integration boundary.** StockAware captures actual results, filters agent capabilities and keeps approval out of every agent's tool list.
+- **A synthetic demo is not production authorization.** The stdio server trusts its local caller; the HTTP host has no authentication or tenant isolation. Never expose the full tool set or host to untrusted users.
+
+## References
+
+- [Microsoft Agent Framework Get Started](https://learn.microsoft.com/agent-framework/get-started/)
+- [Agent looping](https://learn.microsoft.com/agent-framework/agents/looping?pivots=programming-language-csharp)
+- [Agent Skills](https://learn.microsoft.com/agent-framework/agents/skills?pivots=programming-language-csharp)
+- [MCP C# SDK](https://csharp.sdk.modelcontextprotocol.io/)
+
+## Troubleshooting
+
+- **SDK or build errors:** Check `dotnet --version` and confirm that the .NET 10 SDK is installed. Run commands from the repository root and keep the pinned package versions for the workshop.
+- **Authentication or 403 errors:** Run `az login` with the intended account. If the error mentions `Microsoft.CognitiveServices/accounts/AIServices/agents/write`, ask your workshop facilitator or administrator to check your [Foundry RBAC assignments](https://learn.microsoft.com/azure/foundry/concepts/rbac-foundry).
+- **Endpoint or deployment errors:** Check the project endpoint and actual deployment name, and check for environment variables overriding your user secrets. Confirm that the deployment supports the sample's required APIs.
+- **Unexpected inventory or remembered conversations:** Local state survives restarts. Use a new `StockAware__DataDirectory` for a fresh integrated scenario rather than deleting existing state.
+- **No model access yet:** Run sample 05. After building, you can also run StockAware's `--verify-tools` command to check the local MCP integration without Azure inference.
+
+These examples are learning material, not production-ready services. This workspace does not claim schema-constrained model answers, semantic/vector search, production forecasting, or authenticated multi-user hosting.

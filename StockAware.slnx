@@ -1,0 +1,13 @@
+<Solution>
+  <Project Path="08-Looping/08-Looping.csproj" />
+  <Project Path="09-AgentSkills/09-AgentSkills.csproj" />
+  <Project Path="StockAware/StockAware.csproj" />
+  <Project Path="01-YourFirstAgent/01-YourFirstAgent.csproj" />
+  <Project Path="02-AddTools/02-AddTools.csproj" />
+  <Project Path="03-MultiTurnConversations/03-MultiTurnConversations.csproj" />
+  <Project Path="04-MemoryAndPersistence/04-MemoryAndPersistence.csproj" />
+  <Project Path="05-Workflows/05-Workflows.csproj" />
+  <Project Path="06-AgentHarness/06-AgentHarness.csproj" />
+  <Project Path="07-HostYourAgent/07-HostYourAgent.csproj" />
+  <Project Path="StockAwareMcp/StockAwareMcp.csproj" />
+</Solution>
